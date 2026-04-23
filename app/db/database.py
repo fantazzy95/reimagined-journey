@@ -121,6 +121,38 @@ class Database:
                     FOREIGN KEY(product_id) REFERENCES products(id),
                     FOREIGN KEY(currency_id) REFERENCES currencies(id)
                 );
+
+                -- Pricing module (added safely)
+                CREATE TABLE IF NOT EXISTS price_documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    doc_date TEXT NOT NULL,
+                    source_type TEXT,
+                    source_document_id INTEGER,
+                    note TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS price_document_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    old_price REAL,
+                    new_price REAL,
+                    currency_id INTEGER,
+                    applied INTEGER DEFAULT 1,
+                    FOREIGN KEY(document_id) REFERENCES price_documents(id),
+                    FOREIGN KEY(product_id) REFERENCES products(id)
+                );
+
+                CREATE TABLE IF NOT EXISTS price_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    price REAL NOT NULL,
+                    currency_id INTEGER NOT NULL,
+                    changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    source TEXT,
+                    FOREIGN KEY(product_id) REFERENCES products(id)
+                );
                 """
             )
 
