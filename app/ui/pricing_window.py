@@ -7,13 +7,13 @@ from app.services.price_document_service import PriceDocumentService
 
 
 class PricingWindow(QWidget):
-    def __init__(self, db):
+    def __init__(self, db, document_id: int | None = None):
         super().__init__()
         self.setWindowTitle("Встановлення цін")
         self.resize(900, 600)
 
         self.service = PriceDocumentService(db)
-        self.document_id = self.service.create_document()
+        self.document_id = document_id or self.service.create_document()
 
         layout = QVBoxLayout()
 
@@ -38,6 +38,8 @@ class PricingWindow(QWidget):
         layout.addWidget(btn_apply)
 
         self.setLayout(layout)
+
+        self.refresh_table()
 
     def refresh_table(self):
         items = self.service.get_document_items(self.document_id)
