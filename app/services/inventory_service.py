@@ -31,6 +31,41 @@ class InventoryService:
         rate = self.get_currency_rate(currency_id, date)
         return money_round(price * rate)
 
+    def search_products(self, query: str = "") -> list[dict]:
+        pattern = f"%{query.strip()}%"
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT p.id, p.name, p.sku, p.barcode, p.sale_price, c.code AS currency_code
+                FROM products p
+                JOIN currencies c ON c.id = p.sale_currency_id
+                WHERE p.is_active = 1
+                  AND (
+                        ? = ''
+                        OR p.name LIKE ?
+                        OR COALESCE(p.sku, '') LIKE ?
+                        OR COALESCE(p.barcode, '') LIKE ?
+                      )
+                ORDER BY p.name
+                LIMIT 200
+                """,
+                (query.strip(), pattern, pattern, pattern),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_product(self, product_id: int) -> dict | None:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT p.id, p.name, p.sku, p.barcode, p.sale_price, p.sale_currency_id, c.code AS currency_code
+                FROM products p
+                JOIN currencies c ON c.id = p.sale_currency_id
+                WHERE p.id = ?
+                """,
+                (product_id,),
+            ).fetchone()
+            return dict(row) if row else None
+
     def create_sale_document(self, items: list[dict], doc_date: str | None = None):
         doc_date = doc_date or datetime.now().strftime("%Y-%m-%d")
 
