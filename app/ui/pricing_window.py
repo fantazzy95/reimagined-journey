@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QTableWidget, QPushButton,
+    QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QPushButton,
     QInputDialog, QMessageBox
 )
 
@@ -44,19 +44,41 @@ class PricingWindow(QWidget):
         self.table.setRowCount(len(items))
 
         for row_idx, item in enumerate(items):
+            self.table.setItem(row_idx, 0, QTableWidgetItem("✔" if item.get("applied") else ""))
             self.table.setItem(row_idx, 1, QTableWidgetItem(item["product_name"]))
             self.table.setItem(row_idx, 2, QTableWidgetItem(str(item["old_price"])))
             self.table.setItem(row_idx, 3, QTableWidgetItem(str(item["new_price"])))
             self.table.setItem(row_idx, 4, QTableWidgetItem(item.get("sku") or ""))
 
     def add_from_document(self):
-        docs = self.service.list_source_documents()
+        source_type_map = {
+            "Всі": None,
+            "Надходження": "receipt",
+            "Замовлення постачальнику": "supplier_order",
+            "Продаж": "sale",
+        }
 
-        if not docs:
-            QMessageBox.information(self, "Інфо", "Немає документів")
+        source_type_label, ok = QInputDialog.getItem(
+            self,
+            "Тип документа",
+            "Оберіть тип документа:",
+            list(source_type_map.keys()),
+            0,
+            False,
+        )
+        if not ok:
             return
 
-        options = [f"{d['id']} | {d['doc_type']} | {d['doc_date']}" for d in docs]
+        docs = self.service.list_source_documents(source_type_map[source_type_label])
+
+        if not docs:
+            QMessageBox.information(self, "Інфо", "Немає документів цього типу")
+            return
+
+        options = [
+            f"{d['id']} | {d['doc_type']} | {d['doc_date']} | {d.get('doc_number', '')} | {d.get('note', '')}"
+            for d in docs
+        ]
 
         choice, ok = QInputDialog.getItem(
             self,
