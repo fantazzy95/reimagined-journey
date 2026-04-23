@@ -48,6 +48,62 @@ class PriceDocumentService:
                 apply=item.get("apply", True),
             )
 
+    def list_source_documents(self, source_type: str | None = None) -> list[dict]:
+        with self.db.connect() as conn:
+            if source_type:
+                rows = conn.execute(
+                    """
+                    SELECT id, doc_type, COALESCE(doc_number, '') AS doc_number, doc_date, status, COALESCE(note, '') AS note
+                    FROM documents
+                    WHERE doc_type = ?
+                    ORDER BY doc_date DESC, id DESC
+                    LIMIT 200
+                    """,
+                    (source_type,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT id, doc_type, COALESCE(doc_number, '') AS doc_number, doc_date, status, COALESCE(note, '') AS note
+                    FROM documents
+                    ORDER BY doc_date DESC, id DESC
+                    LIMIT 200
+                    """
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+    def add_items_from_existing_document(
+        self,
+        document_id: int,
+        source_document_id: int,
+        mode: str = "markup",
+        markup_percent: float = 0,
+    ) -> int:
+        added = 0
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT product_id, price, currency_id
+                FROM document_items
+                WHERE document_id = ?
+                """,
+                (source_document_id,),
+            ).fetchall()
+
+            for row in rows:
+                self.add_item(
+                    document_id=document_id,
+                    product_id=row["product_id"],
+                    purchase_price=row["price"],
+                    markup_percent=markup_percent,
+                    mode=mode,
+                    currency_id=row["currency_id"],
+                    apply=True,
+                )
+                added += 1
+
+        return added
+
     def add_item(
         self,
         document_id: int,
