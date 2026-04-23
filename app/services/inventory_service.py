@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from app.core.money import money_round
+
 
 class InventoryService:
     def __init__(self, db):
@@ -27,7 +29,7 @@ class InventoryService:
 
     def calculate_price_uah(self, price: float, currency_id: int, date: str) -> float:
         rate = self.get_currency_rate(currency_id, date)
-        return round(price * rate, 2)
+        return money_round(price * rate)
 
     def create_sale_document(self, items: list[dict], doc_date: str | None = None):
         doc_date = doc_date or datetime.now().strftime("%Y-%m-%d")
@@ -41,7 +43,7 @@ class InventoryService:
             )
             doc_id = cursor.lastrowid
 
-            total_uah = 0
+            total_uah = 0.0
 
             for item in items:
                 price = item["price"]
@@ -49,11 +51,11 @@ class InventoryService:
                 quantity = item["quantity"]
 
                 rate = self.get_currency_rate(currency_id, doc_date)
-                price_uah = round(price * rate, 2)
-                line_total = price * quantity
-                line_total_uah = price_uah * quantity
+                price_uah = money_round(price * rate)
+                line_total = money_round(price * quantity)
+                line_total_uah = money_round(price_uah * quantity)
 
-                total_uah += line_total_uah
+                total_uah = money_round(total_uah + line_total_uah)
 
                 cursor.execute(
                     """
