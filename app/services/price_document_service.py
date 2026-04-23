@@ -20,6 +20,34 @@ class PriceDocumentService:
             )
             return cursor.lastrowid
 
+    def create_document_from_source(
+        self,
+        source_type: str,
+        source_document_id: int | None,
+        items: list[dict],
+        note: str | None = None,
+    ) -> int:
+        document_id = self.create_document(
+            source_type=source_type,
+            source_document_id=source_document_id,
+            note=note,
+        )
+        self.add_items_bulk(document_id, items)
+        return document_id
+
+    def add_items_bulk(self, document_id: int, items: list[dict]) -> None:
+        for item in items:
+            self.add_item(
+                document_id=document_id,
+                product_id=item["product_id"],
+                purchase_price=item.get("purchase_price", 0),
+                markup_percent=item.get("markup_percent", 0),
+                mode=item.get("mode", "markup"),
+                supplier_price=item.get("supplier_price"),
+                currency_id=item.get("currency_id"),
+                apply=item.get("apply", True),
+            )
+
     def add_item(
         self,
         document_id: int,
